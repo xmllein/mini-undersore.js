@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vite App</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/main.js"></script>
+</body>
+<script>
+
+  ; ((root) => {
+    // 构造函数需要接收处理的数据
+    // 并将它挂载到this上，这里的this是实例对象
+    function _(value) {
+      if (!(this instanceof _)) {
+        return new _(value)
+      }
+      this._wrapped = value;
+    }
+
+    // 静态方法map
+    _.map = function (arr, callback) {
+      let result = []
+      for (let i = 0; i < arr.length; i++) {
+        result.push(callback(arr[i], i))
+      }
+      return result
+    }
+
+    // 链式调用
+    _.chain = function (obj) {
+      var instance = _(obj);
+      instance._chain = true;
+      return instance;
+    };
+
+    // 静态方法filter
+    _.filter = function (arr, callback) {
+      let result = []
+      for (let i = 0; i < arr.length; i++) {
+        if (callback(arr[i], i)) {
+          result.push(arr[i])
+        }
+      }
+      return result
+    }
+
+    // 静态方法unique
+    _.unique = function (arr) {
+      let result = []
+      for (let i = 0; i < arr.length; i++) {
+        if (result.indexOf(arr[i]) === -1) {
+          result.push(arr[i])
+        }
+      }
+      return result
+    }
+
+
+    //静态方法each(辅助函数)
+    _.each = function (array, callback) {
+      var length = array.length;
+      for (var i = 0; i < length; i++) {
+        callback(array[i]);
+      }
+    }
+
+    // 静态方法functions(辅助函数)
+    _.functions = function (obj) {
+      var result = [];
+      for (var key in obj) {
+        if (typeof obj[key] === 'function') {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    _.prototype.value = function () {
+      return this._wrapped;
+    }
+
+    // 将静态方法映射到成实例方法
+    _.mixin = function (obj) {
+      // 遍历obj里面的函数属性
+      _.each(_.functions(obj), function (name) {
+        // 取出每个函数
+        var func = _[name] = obj[name];
+        // 在原型上设置一个同名函数
+        _.prototype[name] = function () {
+          // 注意这里，实例方法待处理数据是构造函数接收的参数，改造构造函数的代码在后面
+          // 这里将数据取出来作为静态方法的第一个参数
+          var args = [this._wrapped];
+          // 将数据和其他参数放到一个数组里面，作为静态方法的参数
+          Array.prototype.push.apply(args, arguments);
+          console.log('args--->', args);
+          // 用处理好的参数来调用静态方法
+          /* 
+          _([1,2,3]).map( item => item * 2 )
+          相当于
+          _.map([1, 2, 3], (item) => (item * 2))
+          */
+          const res = func.apply(_, args);
+          // 如果是链式调用，就返回实例对象
+          if (this._chain) {
+            // return _(res);
+            this._wrapped = res;
+            return this;
+          }
+          // 将结果返回
+          return res
+        };
+      });
+      return _;
+    };
+
+    // 将_自己作为参数传进去
+    _.mixin(_);
+
+
+    root._ = _;
+  })(this);
+
+
+  // 测试
+  // let arr = [1, 2, 3, 4, 5]
+  // let result = _.map(arr, (item, index) => {
+  //   return item * 2
+  // })
+
+  // const result = _(arr).map(item => item * 2)
+  // console.log(result) // [2, 4, 6, 8, 10]
+
+  // mixin 顺带支持插件
+  /*   _.mixin({
+      add: function (a, b) {
+        return a + b
+      },
+      capitalize: function (string) {
+        return string.charAt(0).toUpperCase() + string.substring(1).toLowerCase();
+      }
+    })
+  
+    const result = _(1).add(2)
+  
+    console.log(result)
+    console.log(_("fabio").capitalize()) */
+
+  // 支持链式调用
+  // 实例方法
+  let arr = [1, 1, 2, 2, 3, 3, 4, 5]
+  const result = _(arr).chain().map(item => item * 2).unique().value()
+  console.log(result) // [2, 4, 6, 8, 10]
+
+  // 静态方法
+  // const result = _.chain(arr).map(item => item * 2).unique().value()
+  // console.log(result) 
+</script>
+
+</html>
